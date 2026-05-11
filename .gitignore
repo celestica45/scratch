@@ -1,0 +1,19 @@
+# Snakemake cache
+.snakemake/
+
+# Workflow outputs
+results/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Windows / WSL metadata
+*:Zone.Identifier
+*.Zone.Identifier
+
+# Raw/input resources
+resources/
+
+# Generated DAG image
+dag.png

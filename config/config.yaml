@@ -1,0 +1,11 @@
+raw_data_dir: resources/raw_data
+results_dir: results
+run_quast: true
+
+quast:
+  reference: resources/quast/USA300_FPR3757.fasta
+  annotation: resources/quast/USA300_FPR3757.gff3
+
+antibiotics:
+  - oxacillin
+  - levofloxacin

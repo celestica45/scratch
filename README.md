@@ -63,7 +63,7 @@ build_analysis_inputs: false
 run_association_tests: true
 ```
 
-## Association Input Config
+## Association Config
 
 ```yaml
 association:
@@ -71,14 +71,17 @@ association:
   mash_sketch_size: 10000
 
   fixed_effects:
-    enabled: true
     mash: true
     phylogeny: true
 
   lmm:
-    enabled: true
     phylogeny: true
     genotype: true
+
+  tests:
+    snps: true
+    genes: false
+    kmers: false
 ```
 
 The phenotype output is always:
@@ -88,6 +91,43 @@ The phenotype output is always:
 ```
 
 The phenotype column in config controls which metadata column is written into that file.
+
+### How The Switches Connect
+
+`build_analysis_inputs` controls preprocessing and association input targets.
+
+When `build_analysis_inputs: true`, these association switches add input files to `rule all`:
+
+| Config switch | Target added when true |
+|---|---|
+| `association.fixed_effects.mash` | `results/{antibiotic}/association/inputs/fixed_effects/{antibiotic}_mash_fixed.tsv` |
+| `association.fixed_effects.phylogeny` | `results/{antibiotic}/association/inputs/fixed_effects/{antibiotic}_phylogeny_fixed.tsv` |
+| `association.lmm.phylogeny` | `results/{antibiotic}/association/inputs/lmm/{antibiotic}_phylogeny_lmm.tsv` |
+| `association.lmm.genotype` | `results/{antibiotic}/association/inputs/lmm/{antibiotic}_genotype_lmm.tsv` |
+
+`run_association_tests` controls GWAS result targets.
+
+When `run_association_tests: true`, these switches choose which association test target groups are requested:
+
+| Config switch | Current behavior |
+|---|---|
+| `association.tests.snps` | Connects to `SNP_ASSOCIATION_TEST_TARGETS`, currently empty until SNP pyseer rules are added. |
+| `association.tests.genes` | Connects to `GENE_ASSOCIATION_TEST_TARGETS`, currently empty until gene pyseer rules are added. |
+| `association.tests.kmers` | Connects to `KMER_ASSOCIATION_TEST_TARGETS`, currently empty until k-mer pyseer rules are added. |
+
+For now, the test switches are already wired in the `Snakefile`, but no GWAS jobs run yet because the test target lists are intentionally empty.
+
+### Possible Config Cases
+
+| Config case | Result |
+|---|---|
+| `build_analysis_inputs: false` and `run_association_tests: false` | `rule all` builds nothing. |
+| `build_analysis_inputs: true` and `run_association_tests: false` | Builds preprocessing and selected association input files only. |
+| `build_analysis_inputs: false` and `run_association_tests: true` | Requests association test targets only. Currently no jobs are added because test target lists are empty. |
+| `build_analysis_inputs: true` and `run_association_tests: true` | Builds selected inputs and selected test targets. Currently test targets are empty. |
+| all `association.fixed_effects.*` values are `false` | No fixed-effect input matrices are requested. |
+| all `association.lmm.*` values are `false` | No LMM input matrices are requested. |
+| all `association.tests.*` values are `false` | No GWAS test target groups are requested. |
 
 Fixed-effect files use:
 

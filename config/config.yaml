@@ -18,7 +18,7 @@ panaroo_clean_mode: strict
 panaroo_alignment: core
 panaroo_threads: 4
 
-run_kmers: true
+run_kmers: false #kmer-counting
 
 kmer_min: 1
 kmer_max: 3
@@ -28,19 +28,22 @@ association:
   mash_sketch_size: 10000
 
   fixed_effects:
-    enabled: true
     mash: true
     phylogeny: true
 
   lmm:
-    enabled: true
     phylogeny: true
     genotype: true
+
+  tests:
+    snps: true
+    genes: false
+    kmers: false
 
 quast:
   reference: resources/quast/USA300_FPR3757.fasta
   annotation: resources/quast/USA300_FPR3757.gff3
 
 antibiotics:
-  - oxacillin
+  #- oxacillin
   - levofloxacin

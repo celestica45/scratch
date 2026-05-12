@@ -42,41 +42,33 @@ ASSOCIATION_PHENOTYPE_COLUMN = ASSOCIATION_CONFIG.get("phenotype_column", "trans
 # Mash sketch size for tutorial-style mash distance correction.
 ASSOCIATION_MASH_SKETCH_SIZE = ASSOCIATION_CONFIG.get("mash_sketch_size", 10000)
 
-# Fixed-effect config controls distance matrices used by regular pyseer via --distances.
+# Fixed-effect inputs are distance matrices used by regular pyseer via --distances.
+# Each option directly controls one input family.
 ASSOCIATION_FIXED_CONFIG = ASSOCIATION_CONFIG.get("fixed_effects", {})
 
-# LMM config controls kinship/similarity matrices used by pyseer --lmm via --similarity.
-ASSOCIATION_LMM_CONFIG = ASSOCIATION_CONFIG.get("lmm", {})
-
-# Enables/disables all fixed-effect population-structure inputs.
-BUILD_FIXED_EFFECT_INPUTS = as_bool(ASSOCIATION_FIXED_CONFIG.get("enabled", False))
-
 # Builds mash distance matrix: {antibiotic}_mash_fixed.tsv.
-BUILD_FIXED_MASH_INPUTS = (
-    BUILD_FIXED_EFFECT_INPUTS
-    and as_bool(ASSOCIATION_FIXED_CONFIG.get("mash", False))
-)
+BUILD_FIXED_MASH_INPUTS = as_bool(ASSOCIATION_FIXED_CONFIG.get("mash", False))
 
 # Builds phylogeny distance matrix: {antibiotic}_phylogeny_fixed.tsv.
-BUILD_FIXED_PHYLOGENY_INPUTS = (
-    BUILD_FIXED_EFFECT_INPUTS
-    and as_bool(ASSOCIATION_FIXED_CONFIG.get("phylogeny", False))
-)
+BUILD_FIXED_PHYLOGENY_INPUTS = as_bool(ASSOCIATION_FIXED_CONFIG.get("phylogeny", False))
 
-# Enables/disables all LMM kinship/similarity inputs.
-BUILD_LMM_INPUTS = as_bool(ASSOCIATION_LMM_CONFIG.get("enabled", False))
+# LMM inputs are kinship/similarity matrices used by pyseer --lmm via --similarity.
+# Each option directly controls one input family.
+ASSOCIATION_LMM_CONFIG = ASSOCIATION_CONFIG.get("lmm", {})
 
 # Builds phylogeny kinship matrix: {antibiotic}_phylogeny_lmm.tsv.
-BUILD_LMM_PHYLOGENY_INPUTS = (
-    BUILD_LMM_INPUTS
-    and as_bool(ASSOCIATION_LMM_CONFIG.get("phylogeny", False))
-)
+BUILD_LMM_PHYLOGENY_INPUTS = as_bool(ASSOCIATION_LMM_CONFIG.get("phylogeny", False))
 
 # Builds genotype kinship matrix from SNP VCF: {antibiotic}_genotype_lmm.tsv.
-BUILD_LMM_GENOTYPE_INPUTS = (
-    BUILD_LMM_INPUTS
-    and as_bool(ASSOCIATION_LMM_CONFIG.get("genotype", False))
-)
+BUILD_LMM_GENOTYPE_INPUTS = as_bool(ASSOCIATION_LMM_CONFIG.get("genotype", False))
+
+# Association test switches. These decide which GWAS result target groups are included
+# when run_association_tests is true. The actual GWAS target lists are added later.
+ASSOCIATION_TEST_CONFIG = ASSOCIATION_CONFIG.get("tests", {})
+
+RUN_SNP_TESTS = as_bool(ASSOCIATION_TEST_CONFIG.get("snps", False))
+RUN_GENE_TESTS = as_bool(ASSOCIATION_TEST_CONFIG.get("genes", False))
+RUN_KMER_TESTS = as_bool(ASSOCIATION_TEST_CONFIG.get("kmers", False))
 
 # Full pyseer GitHub repository used for tutorial helper scripts.
 # The conda pyseer package installs commands like pyseer and similarity_pyseer,
@@ -208,7 +200,20 @@ ASSOCIATION_INPUT_TARGETS = (
     + ASSOCIATION_LMM_GENOTYPE_TARGETS
 )
 
+SNP_ASSOCIATION_TEST_TARGETS = []
+GENE_ASSOCIATION_TEST_TARGETS = []
+KMER_ASSOCIATION_TEST_TARGETS = []
+
 ASSOCIATION_TEST_TARGETS = []
+
+if RUN_SNP_TESTS:
+    ASSOCIATION_TEST_TARGETS += SNP_ASSOCIATION_TEST_TARGETS
+
+if RUN_GENE_TESTS:
+    ASSOCIATION_TEST_TARGETS += GENE_ASSOCIATION_TEST_TARGETS
+
+if RUN_KMER_TESTS:
+    ASSOCIATION_TEST_TARGETS += KMER_ASSOCIATION_TEST_TARGETS
 
 FINAL_TARGETS = []
 
@@ -617,7 +622,7 @@ rule count_kmers:
         kmers=f"{RESULTS_DIR}/{{antibiotic}}/kmers/fsm-lite/{{antibiotic}}_fsm_kmers.txt.gz"
     conda:
         "envs/fsm_lite.yaml"
-    threads: 1
+    threads: 4
     params:
         assemblies_dir=lambda wildcards: f"{RESULTS_DIR}/{wildcards.antibiotic}/assemblies",
         min_kmer=KMER_MIN,

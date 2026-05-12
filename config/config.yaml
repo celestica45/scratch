@@ -1,6 +1,21 @@
 raw_data_dir: resources/raw_data
 results_dir: results
+
 run_quast: true
+
+run_panaroo_qc: true
+panaroo_qc_graph_type: all
+panaroo_qc_threads: 1
+
+run_panaroo_pangenome: true
+panaroo_clean_mode: strict
+panaroo_alignment: core
+panaroo_threads: 4
+
+run_kmers: true
+
+kmer_min: 1
+kmer_max: 3
 
 quast:
   reference: resources/quast/USA300_FPR3757.fasta

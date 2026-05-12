@@ -14,19 +14,21 @@ from pathlib import Path
 parser = argparse.ArgumentParser(description="Download NCBI assemblies from assembly IDs.")
 parser.add_argument("--assembly-ids", required=True, help="Text file with one assembly ID per line.")
 parser.add_argument("--output-dir", required=True, help="Directory for final FASTA assemblies.")
+parser.add_argument("--antibiotic", required=True, help="Antibiotic name used in output filenames.")
 parser.add_argument("--retries", type=int, default=3, help="Number of times to retry failed downloads.")
 parser.add_argument("--batch-size", type=int, default=25, help="Number of assembly IDs per download batch.")
 args = parser.parse_args()
 
 assembly_ids_txt = Path(args.assembly_ids)
 output_dir = Path(args.output_dir)
+antibiotic = args.antibiotic
 retries = max(1, args.retries)
 batch_size = max(1, args.batch_size)
 
 output_dir.mkdir(parents=True, exist_ok=True)
 
-manifest_tsv = output_dir / "assembly_download_manifest.tsv"
-summary_txt = output_dir / "download_summary.txt"
+manifest_tsv = output_dir / f"{antibiotic}_assembly_download_manifest.tsv"
+summary_txt = output_dir / f"{antibiotic}_download_summary.txt"
 
 
 # ============================================================

@@ -24,8 +24,8 @@ output_dir = Path(args.output_dir)
 output_dir.mkdir(parents=True, exist_ok=True)
 
 cleaned_csv = output_dir / f"{antibiotic}_amr_metadata.csv"
-sample_assembly_map = output_dir / "sample_assembly_map.txt"
-assembly_ids = output_dir / "assembly_ids.txt"
+sample_assembly_map = output_dir / f"{antibiotic}_sample_assembly_map.txt"
+assembly_ids = output_dir / f"{antibiotic}_assembly_ids.txt"
 summary_txt = output_dir / f"{antibiotic}_preprocess_summary.txt"
 
 

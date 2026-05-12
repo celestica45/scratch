@@ -74,7 +74,6 @@ association:
     min_af: 0.02
     max_af: 0.98
     max_dimensions: 10
-    lineage: true
     print_samples: true
 
   gwas_tests:
@@ -211,8 +210,13 @@ Within each method folder:
 ```text
 *_SNPs.tsv = pyseer SNP association result table
 *_summary.txt = pyseer stderr run summary
-*_lineage_effects.tsv = lineage effect summary when lineage is enabled
+*_patterns.txt = pyseer pattern hashes from --output-patterns
+*_significance_threshold.txt = count_patterns.py output
+*_qq_plot.png = Q-Q plot from pyseer lrt-pvalue values
+*_SNPs_significant.tsv = SNP rows where lrt-pvalue < count_patterns.py threshold
 ```
+
+For each enabled SNP GWAS method, `rule all` targets the `*_SNPs_significant.tsv` file. This automatically runs pyseer, writes pattern hashes, counts the significance threshold, creates the Q-Q plot, and filters significant SNPs.
 
 Example SNP result files:
 
@@ -223,14 +227,27 @@ results/{antibiotic}/association/tests/snps/phylogeny_lmm/{antibiotic}_snps_phyl
 results/{antibiotic}/association/tests/snps/genotype_lmm/{antibiotic}_snps_genotype_lmm_SNPs.tsv
 ```
 
-When `association.snp_gwas.lineage: true`, pyseer also writes lineage-effect summaries:
+Example SNP pattern-count outputs:
 
 ```text
-results/{antibiotic}/association/tests/snps/mash_fixed/{antibiotic}_snps_mash_fixed_lineage_effects.tsv
-results/{antibiotic}/association/tests/snps/phylogeny_lmm/{antibiotic}_snps_phylogeny_lmm_lineage_effects.tsv
+results/{antibiotic}/association/tests/snps/mash_fixed/{antibiotic}_snps_mash_fixed_patterns.txt
+results/{antibiotic}/association/tests/snps/mash_fixed/{antibiotic}_snps_mash_fixed_significance_threshold.txt
+results/{antibiotic}/association/tests/snps/mash_fixed/{antibiotic}_snps_mash_fixed_qq_plot.png
+results/{antibiotic}/association/tests/snps/mash_fixed/{antibiotic}_snps_mash_fixed_SNPs_significant.tsv
 ```
 
-This step only runs pyseer. Post-GWAS analysis, plots, and annotation will be added separately.
+This step runs pyseer, counts pyseer SNP patterns, creates Q-Q plots, and filters significant SNPs. Manhattan plots, mapping, and annotation will be added separately.
+
+SNP result folder names show which population-structure correction was used:
+
+```text
+mash_fixed = fixed-effect pyseer using mash distances
+phylogeny_fixed = fixed-effect pyseer using phylogeny distances
+phylogeny_lmm = pyseer --lmm using phylogeny similarity
+genotype_lmm = pyseer --lmm using genotype similarity
+```
+
+The Q-Q plot and significant SNP filtering step uses a separate conda environment, `envs/gwas_post.yaml`, so plotting/filtering dependencies can change without changing the GWAS/input environment.
 
 ## Run
 

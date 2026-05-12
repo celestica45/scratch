@@ -31,7 +31,6 @@ association:
     min_af: 0.02
     max_af: 0.98
     max_dimensions: 1
-    lineage: false
     print_samples: false
 
   gwas_tests:

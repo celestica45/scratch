@@ -58,12 +58,11 @@ RUN_SNP_LMM_GENOTYPE_TESTS = as_bool(SNP_LMM_GWAS_TEST_CONFIG.get("genotype", Fa
 RUN_GENE_TESTS = as_bool(ASSOCIATION_GWAS_TEST_CONFIG.get("genes", False))
 RUN_KMER_TESTS = as_bool(ASSOCIATION_GWAS_TEST_CONFIG.get("kmers", False))
 
-# SNP GWAS settings used by pyseer fixed-effect tests.
+# SNP GWAS settings used by pyseer tests.
 SNP_GWAS_CONFIG = ASSOCIATION_CONFIG.get("snp_gwas", {})
 SNP_GWAS_MIN_AF = SNP_GWAS_CONFIG.get("min_af", 0.02)
 SNP_GWAS_MAX_AF = SNP_GWAS_CONFIG.get("max_af", 0.98)
 SNP_GWAS_MAX_DIMENSIONS = SNP_GWAS_CONFIG.get("max_dimensions", 10)
-SNP_GWAS_LINEAGE = as_bool(SNP_GWAS_CONFIG.get("lineage", True))
 SNP_GWAS_PRINT_SAMPLES = as_bool(SNP_GWAS_CONFIG.get("print_samples", True))
 
 # Full pyseer GitHub repository used for tutorial helper scripts.
@@ -79,6 +78,12 @@ PYSEER_REPO_DONE = f"{PYSEER_REPO_DIR}/.clone_complete"
 
 # Specific helper script used by phylogeny-based fixed-effect and LMM inputs.
 PYSEER_PHYLOGENY_DISTANCE = f"{PYSEER_REPO_DIR}/scripts/phylogeny_distance.py"
+
+# Specific helper script used to count unique pyseer variant patterns.
+PYSEER_COUNT_PATTERNS = f"{PYSEER_REPO_DIR}/scripts/count_patterns.py"
+
+# Specific helper script used to draw Q-Q plots from pyseer results.
+PYSEER_QQ_PLOT = f"{PYSEER_REPO_DIR}/scripts/qq_plot.py"
 
 QUAST_CONFIG = config.get("quast", {})
 QUAST_REFERENCE = QUAST_CONFIG["reference"]
@@ -200,25 +205,25 @@ SNP_ASSOCIATION_TEST_TARGETS = []
 
 if RUN_SNP_FIXED_MASH_TESTS:
     SNP_ASSOCIATION_TEST_TARGETS += expand(
-        f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/mash_fixed/{{antibiotic}}_snps_mash_fixed_SNPs.tsv",
+        f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/mash_fixed/{{antibiotic}}_snps_mash_fixed_SNPs_significant.tsv",
         antibiotic=ANTIBIOTICS,
     )
 
 if RUN_SNP_FIXED_PHYLOGENY_TESTS:
     SNP_ASSOCIATION_TEST_TARGETS += expand(
-        f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/phylogeny_fixed/{{antibiotic}}_snps_phylogeny_fixed_SNPs.tsv",
+        f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/phylogeny_fixed/{{antibiotic}}_snps_phylogeny_fixed_SNPs_significant.tsv",
         antibiotic=ANTIBIOTICS,
     )
 
 if RUN_SNP_LMM_PHYLOGENY_TESTS:
     SNP_ASSOCIATION_TEST_TARGETS += expand(
-        f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/phylogeny_lmm/{{antibiotic}}_snps_phylogeny_lmm_SNPs.tsv",
+        f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/phylogeny_lmm/{{antibiotic}}_snps_phylogeny_lmm_SNPs_significant.tsv",
         antibiotic=ANTIBIOTICS,
     )
 
 if RUN_SNP_LMM_GENOTYPE_TESTS:
     SNP_ASSOCIATION_TEST_TARGETS += expand(
-        f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/genotype_lmm/{{antibiotic}}_snps_genotype_lmm_SNPs.tsv",
+        f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/genotype_lmm/{{antibiotic}}_snps_genotype_lmm_SNPs_significant.tsv",
         antibiotic=ANTIBIOTICS,
     )
 
@@ -668,7 +673,8 @@ rule snp_fixed_effect_gwas:
             else f"{RESULTS_DIR}/{wildcards.antibiotic}/association/inputs/fixed_effects/{wildcards.antibiotic}_phylogeny_fixed.tsv"
         )
     output:
-        results=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{fixed_source}}_fixed/{{antibiotic}}_snps_{{fixed_source}}_fixed_SNPs.tsv"
+        results=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{fixed_source}}_fixed/{{antibiotic}}_snps_{{fixed_source}}_fixed_SNPs.tsv",
+        patterns=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{fixed_source}}_fixed/{{antibiotic}}_snps_{{fixed_source}}_fixed_patterns.txt"
     log:
         f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{fixed_source}}_fixed/{{antibiotic}}_snps_{{fixed_source}}_fixed_summary.txt"
     conda:
@@ -680,11 +686,6 @@ rule snp_fixed_effect_gwas:
         min_af=SNP_GWAS_MIN_AF,
         max_af=SNP_GWAS_MAX_AF,
         max_dimensions=SNP_GWAS_MAX_DIMENSIONS,
-        lineage=lambda wildcards: "--lineage" if SNP_GWAS_LINEAGE else "",
-        lineage_file=lambda wildcards: (
-            f"{RESULTS_DIR}/{wildcards.antibiotic}/association/tests/snps/{wildcards.fixed_source}_fixed/"
-            f"{wildcards.antibiotic}_snps_{wildcards.fixed_source}_fixed_lineage_effects.tsv"
-        ),
         print_samples=lambda wildcards: "--print-samples" if SNP_GWAS_PRINT_SAMPLES else ""
     shell:
         """
@@ -697,9 +698,8 @@ rule snp_fixed_effect_gwas:
             --min-af {params.min_af} \
             --max-af {params.max_af} \
             --max-dimensions {params.max_dimensions} \
-            {params.lineage} \
-            --lineage-file {params.lineage_file} \
             {params.print_samples} \
+            --output-patterns {output.patterns} \
             > {output.results} \
             2> {log}
         """
@@ -714,7 +714,8 @@ rule snp_lmm_gwas:
             else f"{RESULTS_DIR}/{wildcards.antibiotic}/association/inputs/lmm/{wildcards.antibiotic}_genotype_lmm.tsv"
         )
     output:
-        results=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{lmm_source}}_lmm/{{antibiotic}}_snps_{{lmm_source}}_lmm_SNPs.tsv"
+        results=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{lmm_source}}_lmm/{{antibiotic}}_snps_{{lmm_source}}_lmm_SNPs.tsv",
+        patterns=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{lmm_source}}_lmm/{{antibiotic}}_snps_{{lmm_source}}_lmm_patterns.txt"
     log:
         f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{lmm_source}}_lmm/{{antibiotic}}_snps_{{lmm_source}}_lmm_summary.txt"
     conda:
@@ -725,11 +726,6 @@ rule snp_lmm_gwas:
     params:
         min_af=SNP_GWAS_MIN_AF,
         max_af=SNP_GWAS_MAX_AF,
-        lineage=lambda wildcards: "--lineage" if SNP_GWAS_LINEAGE else "",
-        lineage_file=lambda wildcards: (
-            f"{RESULTS_DIR}/{wildcards.antibiotic}/association/tests/snps/{wildcards.lmm_source}_lmm/"
-            f"{wildcards.antibiotic}_snps_{wildcards.lmm_source}_lmm_lineage_effects.tsv"
-        ),
         print_samples=lambda wildcards: "--print-samples" if SNP_GWAS_PRINT_SAMPLES else ""
     shell:
         """
@@ -742,11 +738,48 @@ rule snp_lmm_gwas:
             --similarity {input.similarity} \
             --min-af {params.min_af} \
             --max-af {params.max_af} \
-            {params.lineage} \
-            --lineage-file {params.lineage_file} \
             {params.print_samples} \
+            --output-patterns {output.patterns} \
             > {output.results} \
             2> {log}
+        """
+
+rule snp_count_patterns:
+    input:
+        pyseer_repo=PYSEER_REPO_DONE,
+        patterns=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{method}}/{{antibiotic}}_snps_{{method}}_patterns.txt"
+    output:
+        threshold=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{method}}/{{antibiotic}}_snps_{{method}}_significance_threshold.txt"
+    conda:
+        "envs/gwas_inputs.yaml"
+    params:
+        count_patterns=PYSEER_COUNT_PATTERNS
+    shell:
+        """
+        python {params.count_patterns} {input.patterns} > {output.threshold}
+        """
+
+rule snp_post_gwas:
+    input:
+        pyseer_repo=PYSEER_REPO_DONE,
+        limit=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{method}}/{{antibiotic}}_snps_{{method}}_significance_threshold.txt",
+        results=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{method}}/{{antibiotic}}_snps_{{method}}_SNPs.tsv",
+        filter_script="scripts/filter_significant_pyseer.py"
+    output:
+        qq_plot=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{method}}/{{antibiotic}}_snps_{{method}}_qq_plot.png",
+        significant=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{method}}/{{antibiotic}}_snps_{{method}}_SNPs_significant.tsv"
+    conda:
+        "envs/gwas_post.yaml"
+    params:
+        qq_plot=PYSEER_QQ_PLOT
+    shell:
+        """
+        python {params.qq_plot} {input.results} --output {output.qq_plot}
+
+        python {input.filter_script} \
+            --limit {input.limit} \
+            --results {input.results} \
+            --output {output.significant}
         """
 
 rule count_kmers:

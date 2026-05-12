@@ -2,7 +2,7 @@ raw_data_dir: resources/raw_data
 results_dir: results
 
 build_analysis_inputs: true
-run_association_tests: false
+run_association_tests: true
 
 pyseer_repo_url: https://github.com/mgalardini/pyseer.git
 pyseer_repo_dir: resources/pyseer
@@ -27,16 +27,21 @@ association:
   phenotype_column: transformed_mic
   mash_sketch_size: 10000
 
-  fixed_effects:
-    mash: true
-    phylogeny: true
+  snp_gwas:
+    min_af: 0.02
+    max_af: 0.98
+    max_dimensions: 1
+    lineage: false
+    print_samples: false
 
-  lmm:
-    phylogeny: true
-    genotype: true
-
-  tests:
-    snps: true
+  gwas_tests:
+    snps:
+      fixed_effects:
+        mash: true
+        phylogeny: true
+      lmm:
+        phylogeny: true
+        genotype: true
     genes: false
     kmers: false
 

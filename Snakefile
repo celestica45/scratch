@@ -42,33 +42,29 @@ ASSOCIATION_PHENOTYPE_COLUMN = ASSOCIATION_CONFIG.get("phenotype_column", "trans
 # Mash sketch size for tutorial-style mash distance correction.
 ASSOCIATION_MASH_SKETCH_SIZE = ASSOCIATION_CONFIG.get("mash_sketch_size", 10000)
 
-# Fixed-effect inputs are distance matrices used by regular pyseer via --distances.
-# Each option directly controls one input family.
-ASSOCIATION_FIXED_CONFIG = ASSOCIATION_CONFIG.get("fixed_effects", {})
+# Association input files are always built when build_analysis_inputs is true.
+# These switches choose which GWAS result target groups are included when
+# run_association_tests is true.
+ASSOCIATION_GWAS_TEST_CONFIG = ASSOCIATION_CONFIG.get("gwas_tests", {})
+SNP_GWAS_TEST_CONFIG = ASSOCIATION_GWAS_TEST_CONFIG.get("snps", {})
+SNP_FIXED_GWAS_TEST_CONFIG = SNP_GWAS_TEST_CONFIG.get("fixed_effects", {})
+SNP_LMM_GWAS_TEST_CONFIG = SNP_GWAS_TEST_CONFIG.get("lmm", {})
 
-# Builds mash distance matrix: {antibiotic}_mash_fixed.tsv.
-BUILD_FIXED_MASH_INPUTS = as_bool(ASSOCIATION_FIXED_CONFIG.get("mash", False))
+RUN_SNP_FIXED_MASH_TESTS = as_bool(SNP_FIXED_GWAS_TEST_CONFIG.get("mash", False))
+RUN_SNP_FIXED_PHYLOGENY_TESTS = as_bool(SNP_FIXED_GWAS_TEST_CONFIG.get("phylogeny", False))
+RUN_SNP_LMM_PHYLOGENY_TESTS = as_bool(SNP_LMM_GWAS_TEST_CONFIG.get("phylogeny", False))
+RUN_SNP_LMM_GENOTYPE_TESTS = as_bool(SNP_LMM_GWAS_TEST_CONFIG.get("genotype", False))
 
-# Builds phylogeny distance matrix: {antibiotic}_phylogeny_fixed.tsv.
-BUILD_FIXED_PHYLOGENY_INPUTS = as_bool(ASSOCIATION_FIXED_CONFIG.get("phylogeny", False))
+RUN_GENE_TESTS = as_bool(ASSOCIATION_GWAS_TEST_CONFIG.get("genes", False))
+RUN_KMER_TESTS = as_bool(ASSOCIATION_GWAS_TEST_CONFIG.get("kmers", False))
 
-# LMM inputs are kinship/similarity matrices used by pyseer --lmm via --similarity.
-# Each option directly controls one input family.
-ASSOCIATION_LMM_CONFIG = ASSOCIATION_CONFIG.get("lmm", {})
-
-# Builds phylogeny kinship matrix: {antibiotic}_phylogeny_lmm.tsv.
-BUILD_LMM_PHYLOGENY_INPUTS = as_bool(ASSOCIATION_LMM_CONFIG.get("phylogeny", False))
-
-# Builds genotype kinship matrix from SNP VCF: {antibiotic}_genotype_lmm.tsv.
-BUILD_LMM_GENOTYPE_INPUTS = as_bool(ASSOCIATION_LMM_CONFIG.get("genotype", False))
-
-# Association test switches. These decide which GWAS result target groups are included
-# when run_association_tests is true. The actual GWAS target lists are added later.
-ASSOCIATION_TEST_CONFIG = ASSOCIATION_CONFIG.get("tests", {})
-
-RUN_SNP_TESTS = as_bool(ASSOCIATION_TEST_CONFIG.get("snps", False))
-RUN_GENE_TESTS = as_bool(ASSOCIATION_TEST_CONFIG.get("genes", False))
-RUN_KMER_TESTS = as_bool(ASSOCIATION_TEST_CONFIG.get("kmers", False))
+# SNP GWAS settings used by pyseer fixed-effect tests.
+SNP_GWAS_CONFIG = ASSOCIATION_CONFIG.get("snp_gwas", {})
+SNP_GWAS_MIN_AF = SNP_GWAS_CONFIG.get("min_af", 0.02)
+SNP_GWAS_MAX_AF = SNP_GWAS_CONFIG.get("max_af", 0.98)
+SNP_GWAS_MAX_DIMENSIONS = SNP_GWAS_CONFIG.get("max_dimensions", 10)
+SNP_GWAS_LINEAGE = as_bool(SNP_GWAS_CONFIG.get("lineage", True))
+SNP_GWAS_PRINT_SAMPLES = as_bool(SNP_GWAS_CONFIG.get("print_samples", True))
 
 # Full pyseer GitHub repository used for tutorial helper scripts.
 # The conda pyseer package installs commands like pyseer and similarity_pyseer,
@@ -167,7 +163,7 @@ ASSOCIATION_FIXED_MASH_TARGETS = expand(
         f"{RESULTS_DIR}/{{antibiotic}}/association/inputs/fixed_effects/{{antibiotic}}_mash_fixed.tsv",
     ],
     antibiotic=ANTIBIOTICS,
-) if BUILD_FIXED_MASH_INPUTS else []
+)
 
 ASSOCIATION_FIXED_PHYLOGENY_TARGETS = expand(
     [
@@ -175,17 +171,17 @@ ASSOCIATION_FIXED_PHYLOGENY_TARGETS = expand(
         f"{RESULTS_DIR}/{{antibiotic}}/association/inputs/fixed_effects/{{antibiotic}}_phylogeny_fixed.tsv",
     ],
     antibiotic=ANTIBIOTICS,
-) if BUILD_FIXED_PHYLOGENY_INPUTS else []
+)
 
 ASSOCIATION_LMM_PHYLOGENY_TARGETS = expand(
     f"{RESULTS_DIR}/{{antibiotic}}/association/inputs/lmm/{{antibiotic}}_phylogeny_lmm.tsv",
     antibiotic=ANTIBIOTICS,
-) if BUILD_LMM_PHYLOGENY_INPUTS else []
+)
 
 ASSOCIATION_LMM_GENOTYPE_TARGETS = expand(
     f"{RESULTS_DIR}/{{antibiotic}}/association/inputs/lmm/{{antibiotic}}_genotype_lmm.tsv",
     antibiotic=ANTIBIOTICS,
-) if BUILD_LMM_GENOTYPE_INPUTS else []
+)
 
 PYSEER_REPO_TARGETS = [
     PYSEER_REPO_DONE,
@@ -201,13 +197,37 @@ ASSOCIATION_INPUT_TARGETS = (
 )
 
 SNP_ASSOCIATION_TEST_TARGETS = []
+
+if RUN_SNP_FIXED_MASH_TESTS:
+    SNP_ASSOCIATION_TEST_TARGETS += expand(
+        f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/mash_fixed/{{antibiotic}}_snps_mash_fixed_SNPs.tsv",
+        antibiotic=ANTIBIOTICS,
+    )
+
+if RUN_SNP_FIXED_PHYLOGENY_TESTS:
+    SNP_ASSOCIATION_TEST_TARGETS += expand(
+        f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/phylogeny_fixed/{{antibiotic}}_snps_phylogeny_fixed_SNPs.tsv",
+        antibiotic=ANTIBIOTICS,
+    )
+
+if RUN_SNP_LMM_PHYLOGENY_TESTS:
+    SNP_ASSOCIATION_TEST_TARGETS += expand(
+        f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/phylogeny_lmm/{{antibiotic}}_snps_phylogeny_lmm_SNPs.tsv",
+        antibiotic=ANTIBIOTICS,
+    )
+
+if RUN_SNP_LMM_GENOTYPE_TESTS:
+    SNP_ASSOCIATION_TEST_TARGETS += expand(
+        f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/genotype_lmm/{{antibiotic}}_snps_genotype_lmm_SNPs.tsv",
+        antibiotic=ANTIBIOTICS,
+    )
+
 GENE_ASSOCIATION_TEST_TARGETS = []
 KMER_ASSOCIATION_TEST_TARGETS = []
 
 ASSOCIATION_TEST_TARGETS = []
 
-if RUN_SNP_TESTS:
-    ASSOCIATION_TEST_TARGETS += SNP_ASSOCIATION_TEST_TARGETS
+ASSOCIATION_TEST_TARGETS += SNP_ASSOCIATION_TEST_TARGETS
 
 if RUN_GENE_TESTS:
     ASSOCIATION_TEST_TARGETS += GENE_ASSOCIATION_TEST_TARGETS
@@ -481,6 +501,7 @@ import csv
 
 with open("{input.metadata}", newline="") as handle, open("{output.phenotype}", "w") as out:
     reader = csv.DictReader(handle)
+    out.write("samples\\tphenotype\\n")
     for row in reader:
         sample = row["assembly_ID"]
         phenotype = row["{params.phenotype_column}"]
@@ -513,15 +534,39 @@ rule association_mash_sketch:
 
 rule association_mash_fixed:
     input:
-        sketch=f"{RESULTS_DIR}/{{antibiotic}}/association/inputs/fixed_effects/{{antibiotic}}_mash_sketch.msh"
+        sketch=f"{RESULTS_DIR}/{{antibiotic}}/association/inputs/fixed_effects/{{antibiotic}}_mash_sketch.msh",
+        manifest=f"{RESULTS_DIR}/{{antibiotic}}/assemblies/{{antibiotic}}_assembly_download_manifest.tsv"
     output:
         distances=f"{RESULTS_DIR}/{{antibiotic}}/association/inputs/fixed_effects/{{antibiotic}}_mash_fixed.tsv"
     conda:
         "envs/gwas_inputs.yaml"
     threads: 1
+    params:
+        square_mash_tmp=f"{RESULTS_DIR}/{{antibiotic}}/association/inputs/fixed_effects/{{antibiotic}}_mash_fixed.square_mash.tmp.tsv"
     shell:
         """
-        mash dist {input.sketch} {input.sketch} | square_mash > {output.distances}
+        mash dist {input.sketch} {input.sketch} | square_mash > {params.square_mash_tmp}
+
+        python -c '
+import csv
+import pandas as pd
+
+id_map = {{}}
+
+with open("{input.manifest}", newline="") as handle:
+    reader = csv.DictReader(handle, delimiter="\\t")
+    for row in reader:
+        versioned = row["assembly_ID"]
+        unversioned = versioned.split(".")[0]
+        id_map[unversioned] = versioned
+
+matrix = pd.read_csv("{params.square_mash_tmp}", sep="\\t", index_col=0)
+matrix.index = [id_map.get(sample, sample) for sample in matrix.index]
+matrix.columns = [id_map.get(sample, sample) for sample in matrix.columns]
+matrix.to_csv("{output.distances}", sep="\\t")
+'
+
+        rm -f {params.square_mash_tmp}
         """
 
 rule association_core_tree:
@@ -611,6 +656,97 @@ rule association_genotype_lmm:
         mkdir -p $(dirname {output.kinship})
 
         similarity_pyseer --vcf {input.vcf} {input.samples} > {output.kinship}
+        """
+
+rule snp_fixed_effect_gwas:
+    input:
+        phenotype=f"{RESULTS_DIR}/{{antibiotic}}/association/inputs/common/{{antibiotic}}_phenotype.tsv",
+        vcf=f"{RESULTS_DIR}/{{antibiotic}}/snps/snp-sites/{{antibiotic}}_core_snps_only_multiline_no_star.vcf",
+        distances=lambda wildcards: (
+            f"{RESULTS_DIR}/{wildcards.antibiotic}/association/inputs/fixed_effects/{wildcards.antibiotic}_mash_fixed.tsv"
+            if wildcards.fixed_source == "mash"
+            else f"{RESULTS_DIR}/{wildcards.antibiotic}/association/inputs/fixed_effects/{wildcards.antibiotic}_phylogeny_fixed.tsv"
+        )
+    output:
+        results=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{fixed_source}}_fixed/{{antibiotic}}_snps_{{fixed_source}}_fixed_SNPs.tsv"
+    log:
+        f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{fixed_source}}_fixed/{{antibiotic}}_snps_{{fixed_source}}_fixed_summary.txt"
+    conda:
+        "envs/gwas_inputs.yaml"
+    wildcard_constraints:
+        fixed_source="mash|phylogeny"
+    threads: 1
+    params:
+        min_af=SNP_GWAS_MIN_AF,
+        max_af=SNP_GWAS_MAX_AF,
+        max_dimensions=SNP_GWAS_MAX_DIMENSIONS,
+        lineage=lambda wildcards: "--lineage" if SNP_GWAS_LINEAGE else "",
+        lineage_file=lambda wildcards: (
+            f"{RESULTS_DIR}/{wildcards.antibiotic}/association/tests/snps/{wildcards.fixed_source}_fixed/"
+            f"{wildcards.antibiotic}_snps_{wildcards.fixed_source}_fixed_lineage_effects.tsv"
+        ),
+        print_samples=lambda wildcards: "--print-samples" if SNP_GWAS_PRINT_SAMPLES else ""
+    shell:
+        """
+        mkdir -p $(dirname {output.results})
+
+        pyseer \
+            --phenotypes {input.phenotype} \
+            --vcf {input.vcf} \
+            --distances {input.distances} \
+            --min-af {params.min_af} \
+            --max-af {params.max_af} \
+            --max-dimensions {params.max_dimensions} \
+            {params.lineage} \
+            --lineage-file {params.lineage_file} \
+            {params.print_samples} \
+            > {output.results} \
+            2> {log}
+        """
+
+rule snp_lmm_gwas:
+    input:
+        phenotype=f"{RESULTS_DIR}/{{antibiotic}}/association/inputs/common/{{antibiotic}}_phenotype.tsv",
+        vcf=f"{RESULTS_DIR}/{{antibiotic}}/snps/snp-sites/{{antibiotic}}_core_snps_only_multiline_no_star.vcf",
+        similarity=lambda wildcards: (
+            f"{RESULTS_DIR}/{wildcards.antibiotic}/association/inputs/lmm/{wildcards.antibiotic}_phylogeny_lmm.tsv"
+            if wildcards.lmm_source == "phylogeny"
+            else f"{RESULTS_DIR}/{wildcards.antibiotic}/association/inputs/lmm/{wildcards.antibiotic}_genotype_lmm.tsv"
+        )
+    output:
+        results=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{lmm_source}}_lmm/{{antibiotic}}_snps_{{lmm_source}}_lmm_SNPs.tsv"
+    log:
+        f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{lmm_source}}_lmm/{{antibiotic}}_snps_{{lmm_source}}_lmm_summary.txt"
+    conda:
+        "envs/gwas_inputs.yaml"
+    wildcard_constraints:
+        lmm_source="phylogeny|genotype"
+    threads: 1
+    params:
+        min_af=SNP_GWAS_MIN_AF,
+        max_af=SNP_GWAS_MAX_AF,
+        lineage=lambda wildcards: "--lineage" if SNP_GWAS_LINEAGE else "",
+        lineage_file=lambda wildcards: (
+            f"{RESULTS_DIR}/{wildcards.antibiotic}/association/tests/snps/{wildcards.lmm_source}_lmm/"
+            f"{wildcards.antibiotic}_snps_{wildcards.lmm_source}_lmm_lineage_effects.tsv"
+        ),
+        print_samples=lambda wildcards: "--print-samples" if SNP_GWAS_PRINT_SAMPLES else ""
+    shell:
+        """
+        mkdir -p $(dirname {output.results})
+
+        pyseer \
+            --lmm \
+            --phenotypes {input.phenotype} \
+            --vcf {input.vcf} \
+            --similarity {input.similarity} \
+            --min-af {params.min_af} \
+            --max-af {params.max_af} \
+            {params.lineage} \
+            --lineage-file {params.lineage_file} \
+            {params.print_samples} \
+            > {output.results} \
+            2> {log}
         """
 
 rule count_kmers:

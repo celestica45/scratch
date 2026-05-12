@@ -70,19 +70,26 @@ association:
   phenotype_column: transformed_mic
   mash_sketch_size: 10000
 
-  fixed_effects:
-    mash: true
-    phylogeny: true
+  snp_gwas:
+    min_af: 0.02
+    max_af: 0.98
+    max_dimensions: 10
+    lineage: true
+    print_samples: true
 
-  lmm:
-    phylogeny: true
-    genotype: true
-
-  tests:
-    snps: true
+  gwas_tests:
+    snps:
+      fixed_effects:
+        mash: true
+        phylogeny: true
+      lmm:
+        phylogeny: true
+        genotype: true
     genes: false
     kmers: false
 ```
+
+`fixed_effects` and `lmm` are not top-level blocks under `association` anymore. Association input files are always requested when `build_analysis_inputs: true`.
 
 The phenotype output is always:
 
@@ -90,44 +97,93 @@ The phenotype output is always:
 {antibiotic}_phenotype.tsv
 ```
 
-The phenotype column in config controls which metadata column is written into that file.
+The phenotype column in config controls which metadata column is written into that file. Pyseer requires a header row, so the pipeline writes phenotype files like:
+
+```text
+samples	phenotype
+GCA_015619305.3	2.0
+```
 
 ### How The Switches Connect
 
-`build_analysis_inputs` controls preprocessing and association input targets.
+`build_analysis_inputs` builds all inputs needed before GWAS. This includes:
 
-When `build_analysis_inputs: true`, these association switches add input files to `rule all`:
+- phenotype TSV
+- SNP preprocessing outputs
+- mash fixed-effect distance matrix
+- phylogeny fixed-effect distance matrix
+- phylogeny LMM kinship matrix
+- genotype LMM kinship matrix
 
-| Config switch | Target added when true |
+`run_association_tests` runs selected GWAS tests from `association.gwas_tests`.
+
+Currently implemented:
+
+| Config switch | GWAS run when true |
 |---|---|
-| `association.fixed_effects.mash` | `results/{antibiotic}/association/inputs/fixed_effects/{antibiotic}_mash_fixed.tsv` |
-| `association.fixed_effects.phylogeny` | `results/{antibiotic}/association/inputs/fixed_effects/{antibiotic}_phylogeny_fixed.tsv` |
-| `association.lmm.phylogeny` | `results/{antibiotic}/association/inputs/lmm/{antibiotic}_phylogeny_lmm.tsv` |
-| `association.lmm.genotype` | `results/{antibiotic}/association/inputs/lmm/{antibiotic}_genotype_lmm.tsv` |
+| `association.gwas_tests.snps.fixed_effects.mash` | SNP pyseer with `--distances {antibiotic}_mash_fixed.tsv` |
+| `association.gwas_tests.snps.fixed_effects.phylogeny` | SNP pyseer with `--distances {antibiotic}_phylogeny_fixed.tsv` |
+| `association.gwas_tests.snps.lmm.phylogeny` | SNP pyseer LMM with `--similarity {antibiotic}_phylogeny_lmm.tsv` |
+| `association.gwas_tests.snps.lmm.genotype` | SNP pyseer LMM with `--similarity {antibiotic}_genotype_lmm.tsv` |
 
-`run_association_tests` controls GWAS result targets.
-
-When `run_association_tests: true`, these switches choose which association test target groups are requested:
+Not implemented yet:
 
 | Config switch | Current behavior |
 |---|---|
-| `association.tests.snps` | Connects to `SNP_ASSOCIATION_TEST_TARGETS`, currently empty until SNP pyseer rules are added. |
-| `association.tests.genes` | Connects to `GENE_ASSOCIATION_TEST_TARGETS`, currently empty until gene pyseer rules are added. |
-| `association.tests.kmers` | Connects to `KMER_ASSOCIATION_TEST_TARGETS`, currently empty until k-mer pyseer rules are added. |
+| `association.gwas_tests.genes` | Reserved for future gene presence/absence GWAS. |
+| `association.gwas_tests.kmers` | Reserved for future k-mer GWAS. |
 
-For now, the test switches are already wired in the `Snakefile`, but no GWAS jobs run yet because the test target lists are intentionally empty.
+### Mash Distance Labels
+
+Mash distances are created with the same tutorial-style command:
+
+```bash
+mash dist mash_sketch.msh mash_sketch.msh | square_mash
+```
+
+The `square_mash` command strips assembly version suffixes from sample names. The workflow restores versioned sample IDs after `square_mash` using:
+
+```text
+results/{antibiotic}/assemblies/{antibiotic}_assembly_download_manifest.tsv
+```
+
+This keeps the mash distance matrix aligned with phenotype, VCF, and phylogeny sample IDs.
 
 ### Possible Config Cases
 
 | Config case | Result |
 |---|---|
 | `build_analysis_inputs: false` and `run_association_tests: false` | `rule all` builds nothing. |
-| `build_analysis_inputs: true` and `run_association_tests: false` | Builds preprocessing and selected association input files only. |
-| `build_analysis_inputs: false` and `run_association_tests: true` | Requests association test targets only. Currently no jobs are added because test target lists are empty. |
-| `build_analysis_inputs: true` and `run_association_tests: true` | Builds selected inputs and selected test targets. Currently test targets are empty. |
-| all `association.fixed_effects.*` values are `false` | No fixed-effect input matrices are requested. |
-| all `association.lmm.*` values are `false` | No LMM input matrices are requested. |
-| all `association.tests.*` values are `false` | No GWAS test target groups are requested. |
+| `build_analysis_inputs: true` and `run_association_tests: false` | Builds preprocessing and all association input files only. |
+| `build_analysis_inputs: false` and `run_association_tests: true` | Runs selected GWAS tests using existing input files. |
+| `build_analysis_inputs: true` and `run_association_tests: true` | Builds inputs and runs selected GWAS tests. |
+| all `association.gwas_tests.*` values are `false` | No GWAS test target groups are requested. |
+
+Recommended first run:
+
+```yaml
+build_analysis_inputs: true
+run_association_tests: false
+```
+
+After inputs are complete, freeze them and run SNP GWAS:
+
+```yaml
+build_analysis_inputs: false
+run_association_tests: true
+
+association:
+  gwas_tests:
+    snps:
+      fixed_effects:
+        mash: true
+        phylogeny: true
+      lmm:
+        phylogeny: true
+        genotype: true
+    genes: false
+    kmers: false
+```
 
 Fixed-effect files use:
 
@@ -140,6 +196,41 @@ LMM files use:
 ```text
 *_lmm.tsv
 ```
+
+SNP GWAS outputs are organized by the population-structure correction method:
+
+```text
+results/{antibiotic}/association/tests/snps/mash_fixed/
+results/{antibiotic}/association/tests/snps/phylogeny_fixed/
+results/{antibiotic}/association/tests/snps/phylogeny_lmm/
+results/{antibiotic}/association/tests/snps/genotype_lmm/
+```
+
+Within each method folder:
+
+```text
+*_SNPs.tsv = pyseer SNP association result table
+*_summary.txt = pyseer stderr run summary
+*_lineage_effects.tsv = lineage effect summary when lineage is enabled
+```
+
+Example SNP result files:
+
+```text
+results/{antibiotic}/association/tests/snps/mash_fixed/{antibiotic}_snps_mash_fixed_SNPs.tsv
+results/{antibiotic}/association/tests/snps/phylogeny_fixed/{antibiotic}_snps_phylogeny_fixed_SNPs.tsv
+results/{antibiotic}/association/tests/snps/phylogeny_lmm/{antibiotic}_snps_phylogeny_lmm_SNPs.tsv
+results/{antibiotic}/association/tests/snps/genotype_lmm/{antibiotic}_snps_genotype_lmm_SNPs.tsv
+```
+
+When `association.snp_gwas.lineage: true`, pyseer also writes lineage-effect summaries:
+
+```text
+results/{antibiotic}/association/tests/snps/mash_fixed/{antibiotic}_snps_mash_fixed_lineage_effects.tsv
+results/{antibiotic}/association/tests/snps/phylogeny_lmm/{antibiotic}_snps_phylogeny_lmm_lineage_effects.tsv
+```
+
+This step only runs pyseer. Post-GWAS analysis, plots, and annotation will be added separately.
 
 ## Run
 

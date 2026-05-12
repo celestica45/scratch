@@ -14,3 +14,4 @@ __pycache__/
 
 # Generated DAG image
 dag.png
+resources/pyseer/

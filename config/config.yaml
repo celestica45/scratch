@@ -33,6 +33,12 @@ association:
     max_dimensions: 1
     print_samples: false
 
+  gene_gwas:
+    min_af: 0.02
+    max_af: 0.98
+    max_dimensions: 1
+    print_samples: false
+
   gwas_tests:
     snps:
       fixed_effects:
@@ -41,7 +47,13 @@ association:
       lmm:
         phylogeny: true
         genotype: true
-    genes: false
+    genes:
+      fixed_effects:
+        mash: true
+        phylogeny: true
+      lmm:
+        phylogeny: true
+        genotype: true
     kmers: false
 
 quast:

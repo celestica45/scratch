@@ -49,13 +49,21 @@ ASSOCIATION_GWAS_TEST_CONFIG = ASSOCIATION_CONFIG.get("gwas_tests", {})
 SNP_GWAS_TEST_CONFIG = ASSOCIATION_GWAS_TEST_CONFIG.get("snps", {})
 SNP_FIXED_GWAS_TEST_CONFIG = SNP_GWAS_TEST_CONFIG.get("fixed_effects", {})
 SNP_LMM_GWAS_TEST_CONFIG = SNP_GWAS_TEST_CONFIG.get("lmm", {})
+GENE_GWAS_TEST_CONFIG = ASSOCIATION_GWAS_TEST_CONFIG.get("genes", {})
+if not isinstance(GENE_GWAS_TEST_CONFIG, dict):
+    GENE_GWAS_TEST_CONFIG = {}
+GENE_FIXED_GWAS_TEST_CONFIG = GENE_GWAS_TEST_CONFIG.get("fixed_effects", {})
+GENE_LMM_GWAS_TEST_CONFIG = GENE_GWAS_TEST_CONFIG.get("lmm", {})
 
 RUN_SNP_FIXED_MASH_TESTS = as_bool(SNP_FIXED_GWAS_TEST_CONFIG.get("mash", False))
 RUN_SNP_FIXED_PHYLOGENY_TESTS = as_bool(SNP_FIXED_GWAS_TEST_CONFIG.get("phylogeny", False))
 RUN_SNP_LMM_PHYLOGENY_TESTS = as_bool(SNP_LMM_GWAS_TEST_CONFIG.get("phylogeny", False))
 RUN_SNP_LMM_GENOTYPE_TESTS = as_bool(SNP_LMM_GWAS_TEST_CONFIG.get("genotype", False))
+RUN_GENE_FIXED_MASH_TESTS = as_bool(GENE_FIXED_GWAS_TEST_CONFIG.get("mash", False))
+RUN_GENE_FIXED_PHYLOGENY_TESTS = as_bool(GENE_FIXED_GWAS_TEST_CONFIG.get("phylogeny", False))
+RUN_GENE_LMM_PHYLOGENY_TESTS = as_bool(GENE_LMM_GWAS_TEST_CONFIG.get("phylogeny", False))
+RUN_GENE_LMM_GENOTYPE_TESTS = as_bool(GENE_LMM_GWAS_TEST_CONFIG.get("genotype", False))
 
-RUN_GENE_TESTS = as_bool(ASSOCIATION_GWAS_TEST_CONFIG.get("genes", False))
 RUN_KMER_TESTS = as_bool(ASSOCIATION_GWAS_TEST_CONFIG.get("kmers", False))
 
 # SNP GWAS settings used by pyseer tests.
@@ -64,6 +72,13 @@ SNP_GWAS_MIN_AF = SNP_GWAS_CONFIG.get("min_af", 0.02)
 SNP_GWAS_MAX_AF = SNP_GWAS_CONFIG.get("max_af", 0.98)
 SNP_GWAS_MAX_DIMENSIONS = SNP_GWAS_CONFIG.get("max_dimensions", 10)
 SNP_GWAS_PRINT_SAMPLES = as_bool(SNP_GWAS_CONFIG.get("print_samples", True))
+
+# Gene presence/absence GWAS settings used by pyseer tests.
+GENE_GWAS_CONFIG = ASSOCIATION_CONFIG.get("gene_gwas", {})
+GENE_GWAS_MIN_AF = GENE_GWAS_CONFIG.get("min_af", 0.02)
+GENE_GWAS_MAX_AF = GENE_GWAS_CONFIG.get("max_af", 0.98)
+GENE_GWAS_MAX_DIMENSIONS = GENE_GWAS_CONFIG.get("max_dimensions", 10)
+GENE_GWAS_PRINT_SAMPLES = as_bool(GENE_GWAS_CONFIG.get("print_samples", False))
 
 # Full pyseer GitHub repository used for tutorial helper scripts.
 # The conda pyseer package installs commands like pyseer and similarity_pyseer,
@@ -205,37 +220,84 @@ SNP_ASSOCIATION_TEST_TARGETS = []
 
 if RUN_SNP_FIXED_MASH_TESTS:
     SNP_ASSOCIATION_TEST_TARGETS += expand(
-        f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/mash_fixed/{{antibiotic}}_snps_mash_fixed_SNPs_significant.tsv",
+        [
+            f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/mash_fixed/{{antibiotic}}_snps_mash_fixed_qq_plot.png",
+            f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/mash_fixed/{{antibiotic}}_snps_mash_fixed_SNPs_significant.tsv",
+        ],
         antibiotic=ANTIBIOTICS,
     )
 
 if RUN_SNP_FIXED_PHYLOGENY_TESTS:
     SNP_ASSOCIATION_TEST_TARGETS += expand(
-        f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/phylogeny_fixed/{{antibiotic}}_snps_phylogeny_fixed_SNPs_significant.tsv",
+        [
+            f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/phylogeny_fixed/{{antibiotic}}_snps_phylogeny_fixed_qq_plot.png",
+            f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/phylogeny_fixed/{{antibiotic}}_snps_phylogeny_fixed_SNPs_significant.tsv",
+        ],
         antibiotic=ANTIBIOTICS,
     )
 
 if RUN_SNP_LMM_PHYLOGENY_TESTS:
     SNP_ASSOCIATION_TEST_TARGETS += expand(
-        f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/phylogeny_lmm/{{antibiotic}}_snps_phylogeny_lmm_SNPs_significant.tsv",
+        [
+            f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/phylogeny_lmm/{{antibiotic}}_snps_phylogeny_lmm_qq_plot.png",
+            f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/phylogeny_lmm/{{antibiotic}}_snps_phylogeny_lmm_SNPs_significant.tsv",
+        ],
         antibiotic=ANTIBIOTICS,
     )
 
 if RUN_SNP_LMM_GENOTYPE_TESTS:
     SNP_ASSOCIATION_TEST_TARGETS += expand(
-        f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/genotype_lmm/{{antibiotic}}_snps_genotype_lmm_SNPs_significant.tsv",
+        [
+            f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/genotype_lmm/{{antibiotic}}_snps_genotype_lmm_qq_plot.png",
+            f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/genotype_lmm/{{antibiotic}}_snps_genotype_lmm_SNPs_significant.tsv",
+        ],
         antibiotic=ANTIBIOTICS,
     )
 
 GENE_ASSOCIATION_TEST_TARGETS = []
+
+if RUN_GENE_FIXED_MASH_TESTS:
+    GENE_ASSOCIATION_TEST_TARGETS += expand(
+        [
+            f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/mash_fixed/{{antibiotic}}_genes_mash_fixed_qq_plot.png",
+            f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/mash_fixed/{{antibiotic}}_genes_mash_fixed_genes_significant.tsv",
+        ],
+        antibiotic=ANTIBIOTICS,
+    )
+
+if RUN_GENE_FIXED_PHYLOGENY_TESTS:
+    GENE_ASSOCIATION_TEST_TARGETS += expand(
+        [
+            f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/phylogeny_fixed/{{antibiotic}}_genes_phylogeny_fixed_qq_plot.png",
+            f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/phylogeny_fixed/{{antibiotic}}_genes_phylogeny_fixed_genes_significant.tsv",
+        ],
+        antibiotic=ANTIBIOTICS,
+    )
+
+if RUN_GENE_LMM_PHYLOGENY_TESTS:
+    GENE_ASSOCIATION_TEST_TARGETS += expand(
+        [
+            f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/phylogeny_lmm/{{antibiotic}}_genes_phylogeny_lmm_qq_plot.png",
+            f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/phylogeny_lmm/{{antibiotic}}_genes_phylogeny_lmm_genes_significant.tsv",
+        ],
+        antibiotic=ANTIBIOTICS,
+    )
+
+if RUN_GENE_LMM_GENOTYPE_TESTS:
+    GENE_ASSOCIATION_TEST_TARGETS += expand(
+        [
+            f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/genotype_lmm/{{antibiotic}}_genes_genotype_lmm_qq_plot.png",
+            f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/genotype_lmm/{{antibiotic}}_genes_genotype_lmm_genes_significant.tsv",
+        ],
+        antibiotic=ANTIBIOTICS,
+    )
+
 KMER_ASSOCIATION_TEST_TARGETS = []
 
 ASSOCIATION_TEST_TARGETS = []
 
 ASSOCIATION_TEST_TARGETS += SNP_ASSOCIATION_TEST_TARGETS
-
-if RUN_GENE_TESTS:
-    ASSOCIATION_TEST_TARGETS += GENE_ASSOCIATION_TEST_TARGETS
+ASSOCIATION_TEST_TARGETS += GENE_ASSOCIATION_TEST_TARGETS
 
 if RUN_KMER_TESTS:
     ASSOCIATION_TEST_TARGETS += KMER_ASSOCIATION_TEST_TARGETS
@@ -759,15 +821,12 @@ rule snp_count_patterns:
         python {params.count_patterns} {input.patterns} > {output.threshold}
         """
 
-rule snp_post_gwas:
+rule snp_qq_plot:
     input:
         pyseer_repo=PYSEER_REPO_DONE,
-        limit=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{method}}/{{antibiotic}}_snps_{{method}}_significance_threshold.txt",
-        results=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{method}}/{{antibiotic}}_snps_{{method}}_SNPs.tsv",
-        filter_script="scripts/filter_significant_pyseer.py"
+        results=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{method}}/{{antibiotic}}_snps_{{method}}_SNPs.tsv"
     output:
-        qq_plot=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{method}}/{{antibiotic}}_snps_{{method}}_qq_plot.png",
-        significant=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{method}}/{{antibiotic}}_snps_{{method}}_SNPs_significant.tsv"
+        qq_plot=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{method}}/{{antibiotic}}_snps_{{method}}_qq_plot.png"
     conda:
         "envs/gwas_post.yaml"
     params:
@@ -775,8 +834,146 @@ rule snp_post_gwas:
     shell:
         """
         python {params.qq_plot} {input.results} --output {output.qq_plot}
+        """
 
-        python {input.filter_script} \
+rule filter_significant_snps:
+    input:
+        limit=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{method}}/{{antibiotic}}_snps_{{method}}_significance_threshold.txt",
+        results=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{method}}/{{antibiotic}}_snps_{{method}}_SNPs.tsv"
+    output:
+        significant=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/snps/{{method}}/{{antibiotic}}_snps_{{method}}_SNPs_significant.tsv"
+    conda:
+        "envs/gwas_post.yaml"
+    shell:
+        """
+        python scripts/filter_significant_pyseer.py \
+            --limit {input.limit} \
+            --results {input.results} \
+            --output {output.significant}
+        """
+
+rule gene_fixed_effect_gwas:
+    input:
+        phenotype=f"{RESULTS_DIR}/{{antibiotic}}/association/inputs/common/{{antibiotic}}_phenotype.tsv",
+        genes=f"{RESULTS_DIR}/{{antibiotic}}/pangenome/panaroo/{{antibiotic}}_gene_presence_absence.Rtab",
+        distances=lambda wildcards: (
+            f"{RESULTS_DIR}/{wildcards.antibiotic}/association/inputs/fixed_effects/{wildcards.antibiotic}_mash_fixed.tsv"
+            if wildcards.fixed_source == "mash"
+            else f"{RESULTS_DIR}/{wildcards.antibiotic}/association/inputs/fixed_effects/{wildcards.antibiotic}_phylogeny_fixed.tsv"
+        )
+    output:
+        results=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/{{fixed_source}}_fixed/{{antibiotic}}_genes_{{fixed_source}}_fixed_genes.tsv",
+        patterns=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/{{fixed_source}}_fixed/{{antibiotic}}_genes_{{fixed_source}}_fixed_patterns.txt"
+    log:
+        f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/{{fixed_source}}_fixed/{{antibiotic}}_genes_{{fixed_source}}_fixed_summary.txt"
+    conda:
+        "envs/gwas_inputs.yaml"
+    wildcard_constraints:
+        fixed_source="mash|phylogeny"
+    threads: 1
+    params:
+        min_af=GENE_GWAS_MIN_AF,
+        max_af=GENE_GWAS_MAX_AF,
+        max_dimensions=GENE_GWAS_MAX_DIMENSIONS,
+        print_samples=lambda wildcards: "--print-samples" if GENE_GWAS_PRINT_SAMPLES else ""
+    shell:
+        """
+        mkdir -p $(dirname {output.results})
+
+        pyseer \
+            --phenotypes {input.phenotype} \
+            --pres {input.genes} \
+            --distances {input.distances} \
+            --min-af {params.min_af} \
+            --max-af {params.max_af} \
+            --max-dimensions {params.max_dimensions} \
+            {params.print_samples} \
+            --output-patterns {output.patterns} \
+            > {output.results} \
+            2> {log}
+        """
+
+rule gene_lmm_gwas:
+    input:
+        phenotype=f"{RESULTS_DIR}/{{antibiotic}}/association/inputs/common/{{antibiotic}}_phenotype.tsv",
+        genes=f"{RESULTS_DIR}/{{antibiotic}}/pangenome/panaroo/{{antibiotic}}_gene_presence_absence.Rtab",
+        similarity=lambda wildcards: (
+            f"{RESULTS_DIR}/{wildcards.antibiotic}/association/inputs/lmm/{wildcards.antibiotic}_phylogeny_lmm.tsv"
+            if wildcards.lmm_source == "phylogeny"
+            else f"{RESULTS_DIR}/{wildcards.antibiotic}/association/inputs/lmm/{wildcards.antibiotic}_genotype_lmm.tsv"
+        )
+    output:
+        results=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/{{lmm_source}}_lmm/{{antibiotic}}_genes_{{lmm_source}}_lmm_genes.tsv",
+        patterns=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/{{lmm_source}}_lmm/{{antibiotic}}_genes_{{lmm_source}}_lmm_patterns.txt"
+    log:
+        f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/{{lmm_source}}_lmm/{{antibiotic}}_genes_{{lmm_source}}_lmm_summary.txt"
+    conda:
+        "envs/gwas_inputs.yaml"
+    wildcard_constraints:
+        lmm_source="phylogeny|genotype"
+    threads: 1
+    params:
+        min_af=GENE_GWAS_MIN_AF,
+        max_af=GENE_GWAS_MAX_AF,
+        print_samples=lambda wildcards: "--print-samples" if GENE_GWAS_PRINT_SAMPLES else ""
+    shell:
+        """
+        mkdir -p $(dirname {output.results})
+
+        pyseer \
+            --lmm \
+            --phenotypes {input.phenotype} \
+            --pres {input.genes} \
+            --similarity {input.similarity} \
+            --min-af {params.min_af} \
+            --max-af {params.max_af} \
+            {params.print_samples} \
+            --output-patterns {output.patterns} \
+            > {output.results} \
+            2> {log}
+        """
+
+rule gene_count_patterns:
+    input:
+        pyseer_repo=PYSEER_REPO_DONE,
+        patterns=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/{{method}}/{{antibiotic}}_genes_{{method}}_patterns.txt"
+    output:
+        threshold=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/{{method}}/{{antibiotic}}_genes_{{method}}_significance_threshold.txt"
+    conda:
+        "envs/gwas_inputs.yaml"
+    params:
+        count_patterns=PYSEER_COUNT_PATTERNS
+    shell:
+        """
+        python {params.count_patterns} {input.patterns} > {output.threshold}
+        """
+
+rule gene_qq_plot:
+    input:
+        pyseer_repo=PYSEER_REPO_DONE,
+        results=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/{{method}}/{{antibiotic}}_genes_{{method}}_genes.tsv"
+    output:
+        qq_plot=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/{{method}}/{{antibiotic}}_genes_{{method}}_qq_plot.png"
+    conda:
+        "envs/gwas_post.yaml"
+    params:
+        qq_plot=PYSEER_QQ_PLOT
+    shell:
+        """
+        python {params.qq_plot} {input.results} --output {output.qq_plot}
+        """
+
+rule filter_significant_genes:
+    input:
+        limit=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/{{method}}/{{antibiotic}}_genes_{{method}}_significance_threshold.txt",
+        results=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/{{method}}/{{antibiotic}}_genes_{{method}}_genes.tsv"
+    output:
+        significant=f"{RESULTS_DIR}/{{antibiotic}}/association/tests/genes/{{method}}/{{antibiotic}}_genes_{{method}}_genes_significant.tsv"
+    conda:
+        "envs/gwas_post.yaml"
+    shell:
+        """
+        python scripts/filter_significant_pyseer.py \
             --limit {input.limit} \
             --results {input.results} \
             --output {output.significant}

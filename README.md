@@ -76,6 +76,12 @@ association:
     max_dimensions: 10
     print_samples: true
 
+  gene_gwas:
+    min_af: 0.02
+    max_af: 0.98
+    max_dimensions: 10
+    print_samples: false
+
   gwas_tests:
     snps:
       fixed_effects:
@@ -84,7 +90,13 @@ association:
       lmm:
         phylogeny: true
         genotype: true
-    genes: false
+    genes:
+      fixed_effects:
+        mash: true
+        phylogeny: true
+      lmm:
+        phylogeny: true
+        genotype: true
     kmers: false
 ```
 
@@ -124,12 +136,15 @@ Currently implemented:
 | `association.gwas_tests.snps.fixed_effects.phylogeny` | SNP pyseer with `--distances {antibiotic}_phylogeny_fixed.tsv` |
 | `association.gwas_tests.snps.lmm.phylogeny` | SNP pyseer LMM with `--similarity {antibiotic}_phylogeny_lmm.tsv` |
 | `association.gwas_tests.snps.lmm.genotype` | SNP pyseer LMM with `--similarity {antibiotic}_genotype_lmm.tsv` |
+| `association.gwas_tests.genes.fixed_effects.mash` | Gene pyseer with `--pres` and `--distances {antibiotic}_mash_fixed.tsv` |
+| `association.gwas_tests.genes.fixed_effects.phylogeny` | Gene pyseer with `--pres` and `--distances {antibiotic}_phylogeny_fixed.tsv` |
+| `association.gwas_tests.genes.lmm.phylogeny` | Gene pyseer LMM with `--pres` and `--similarity {antibiotic}_phylogeny_lmm.tsv` |
+| `association.gwas_tests.genes.lmm.genotype` | Gene pyseer LMM with `--pres` and `--similarity {antibiotic}_genotype_lmm.tsv` |
 
 Not implemented yet:
 
 | Config switch | Current behavior |
 |---|---|
-| `association.gwas_tests.genes` | Reserved for future gene presence/absence GWAS. |
 | `association.gwas_tests.kmers` | Reserved for future k-mer GWAS. |
 
 ### Mash Distance Labels
@@ -180,7 +195,13 @@ association:
       lmm:
         phylogeny: true
         genotype: true
-    genes: false
+    genes:
+      fixed_effects:
+        mash: true
+        phylogeny: true
+      lmm:
+        phylogeny: true
+        genotype: true
     kmers: false
 ```
 
@@ -216,7 +237,7 @@ Within each method folder:
 *_SNPs_significant.tsv = SNP rows where lrt-pvalue < count_patterns.py threshold
 ```
 
-For each enabled SNP GWAS method, `rule all` targets the `*_SNPs_significant.tsv` file. This automatically runs pyseer, writes pattern hashes, counts the significance threshold, creates the Q-Q plot, and filters significant SNPs.
+For each enabled SNP GWAS method, `rule all` targets both the `*_qq_plot.png` and `*_SNPs_significant.tsv` files. This automatically runs pyseer, writes pattern hashes, counts the significance threshold, creates the Q-Q plot, and filters significant SNPs.
 
 Example SNP result files:
 
@@ -236,7 +257,7 @@ results/{antibiotic}/association/tests/snps/mash_fixed/{antibiotic}_snps_mash_fi
 results/{antibiotic}/association/tests/snps/mash_fixed/{antibiotic}_snps_mash_fixed_SNPs_significant.tsv
 ```
 
-This step runs pyseer, counts pyseer SNP patterns, creates Q-Q plots, and filters significant SNPs. Manhattan plots, mapping, and annotation will be added separately.
+Q-Q plotting and significant SNP filtering are separate Snakemake rules. Manhattan plots, mapping, and annotation will be added separately.
 
 SNP result folder names show which population-structure correction was used:
 
@@ -248,6 +269,34 @@ genotype_lmm = pyseer --lmm using genotype similarity
 ```
 
 The Q-Q plot and significant SNP filtering step uses a separate conda environment, `envs/gwas_post.yaml`, so plotting/filtering dependencies can change without changing the GWAS/input environment.
+
+Gene GWAS uses Panaroo gene presence/absence as the pyseer `--pres` input:
+
+```text
+results/{antibiotic}/pangenome/panaroo/{antibiotic}_gene_presence_absence.Rtab
+```
+
+Gene GWAS outputs use the same method folders as SNPs:
+
+```text
+results/{antibiotic}/association/tests/genes/mash_fixed/
+results/{antibiotic}/association/tests/genes/phylogeny_fixed/
+results/{antibiotic}/association/tests/genes/phylogeny_lmm/
+results/{antibiotic}/association/tests/genes/genotype_lmm/
+```
+
+Within each gene method folder:
+
+```text
+*_genes.tsv = pyseer gene association result table
+*_summary.txt = pyseer stderr run summary
+*_patterns.txt = pyseer pattern hashes from --output-patterns
+*_significance_threshold.txt = count_patterns.py output
+*_qq_plot.png = Q-Q plot from pyseer lrt-pvalue values
+*_genes_significant.tsv = gene rows where lrt-pvalue < count_patterns.py threshold
+```
+
+For each enabled gene GWAS method, `rule all` targets both the `*_qq_plot.png` and `*_genes_significant.tsv` files.
 
 ## Run
 

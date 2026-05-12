@@ -1,6 +1,12 @@
 raw_data_dir: resources/raw_data
 results_dir: results
 
+build_analysis_inputs: true
+run_association_tests: false
+
+pyseer_repo_url: https://github.com/mgalardini/pyseer.git
+pyseer_repo_dir: resources/pyseer
+
 run_quast: true
 
 run_panaroo_qc: true
@@ -16,6 +22,20 @@ run_kmers: true
 
 kmer_min: 1
 kmer_max: 3
+
+association:
+  phenotype_column: transformed_mic
+  mash_sketch_size: 10000
+
+  fixed_effects:
+    enabled: true
+    mash: true
+    phylogeny: true
+
+  lmm:
+    enabled: true
+    phylogeny: true
+    genotype: true
 
 quast:
   reference: resources/quast/USA300_FPR3757.fasta
